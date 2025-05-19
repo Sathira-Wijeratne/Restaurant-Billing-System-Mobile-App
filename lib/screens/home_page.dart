@@ -21,17 +21,30 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   final db = FirebaseFirestore.instance;
-  double itemTotal = 0.0;
+  double itemTotal = 0.00;
   // TODO : is it ok to create linkedhashmap like this?
-  LinkedHashMap<String, int> selectedItems = new LinkedHashMap();
+  LinkedHashMap<String, int> selectedItems = LinkedHashMap();
+  double balance = 0.00;
+  double paidAmount = 0.00;
+  bool isLoading = true;
+  late List<Map<String, dynamic>> items;
 
   // TODO : is initstate necessary and other methods necessary? what variables goes inside them?
-  // @override
-  // void initState() {
-  //   // TODO: implement initState
-  //   super.initState();
-  //   selectedItems = LinkedHashMap<String, int>();
-  // }
+  @override
+  void initState() {
+    // TODO: implement initState
+    super.initState();
+
+    // fetch items
+    fetchItems().then((fetchedItems){
+      setState(() {
+        items = fetchedItems;
+        isLoading = false;
+      });
+    });
+
+    // selectedItems = LinkedHashMap<String, int>();
+  }
 
   // methods
   Future<List<Map<String, dynamic>>> fetchItems() async {
@@ -62,6 +75,25 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
+  void closeSale(){
+    if(selectedItems.isEmpty){
+    //   notify that sale cannot be closed
+    }
+
+    // close sale
+
+    // notify success
+
+    // clear variables
+    setState(() {
+      itemTotal = 0.0;
+      paidAmount = 0.0;
+      balance = 0.0;
+      selectedItems.clear();
+    });
+
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -72,20 +104,11 @@ class _HomePageState extends State<HomePage> {
         body: Column(
           children: [
             Expanded(
-              child: FutureBuilder<List<Map<String, dynamic>>>(
-                future: fetchItems(),
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
-                  if (snapshot.hasError) {
-                    return Center(child: Text('Error: ${snapshot.error}'));
-                  }
-                  final items = snapshot.data ?? []; // what does ?? mean?
-                  if (items.isEmpty) {
-                    return const Center(child: Text('No items found.'));
-                  }
-                  return Row(
+                child: isLoading
+                    ? const Center(child: CircularProgressIndicator(),)
+                    : items.isEmpty
+                    ? const Center(child: Text('No items found.'),)
+                    :  Row(
                     children: [
                       // Left: Name and Price
                       Expanded(
@@ -165,9 +188,7 @@ class _HomePageState extends State<HomePage> {
                         ),
                       ),
                     ],
-                  );
-                },
-              ),
+                  ),
             ),
             Column(
               crossAxisAlignment: CrossAxisAlignment.center,
@@ -210,18 +231,36 @@ class _HomePageState extends State<HomePage> {
               child: Row(
                 children: [
                   Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: Text('Total: \Rs.${itemTotal.toStringAsFixed(2)}'),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: Text('Total: \Rs.${itemTotal.toStringAsFixed(2)}'),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: Text('Paid Amount: Rs.${paidAmount.toStringAsFixed(2)}'),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: Text('Balance: Rs.${balance.toStringAsFixed(2)}'),
+                        ),
+                      ],
                     ),
                   ),
                   Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: ElevatedButton(
-                        onPressed: clearSelectedItems,
-                        child: Text('Clear selection'),
-                      ),
+                    child: Column(
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: ElevatedButton(
+                            onPressed: clearSelectedItems,
+                            child: Text('Clear selection'),
+                          ),
+                        ),
+                        ElevatedButton(onPressed: closeSale, child: Text('Close Sale'))
+                      ],
                     ),
                   ),
                 ],
