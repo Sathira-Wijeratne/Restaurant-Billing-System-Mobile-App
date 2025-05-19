@@ -1,6 +1,7 @@
 import 'dart:collection';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 /**
@@ -20,6 +21,7 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
+  //
   final db = FirebaseFirestore.instance;
   double itemTotal = 0.00;
   // TODO : is it ok to create linkedhashmap like this?
@@ -29,10 +31,9 @@ class _HomePageState extends State<HomePage> {
   bool isLoading = true;
   late List<Map<String, dynamic>> items;
 
-  // TODO : is initstate necessary and other methods necessary? what variables goes inside them?
+  //
   @override
   void initState() {
-    // TODO: implement initState
     super.initState();
 
     // fetch items
@@ -41,9 +42,17 @@ class _HomePageState extends State<HomePage> {
         items = fetchedItems;
         isLoading = false;
       });
-    });
+    }).catchError((error){
+      if (kDebugMode) {
+        print("Error fetching items: $error");
+      }
+      setState(() {
+        isLoading = false;
+      });
 
-    // selectedItems = LinkedHashMap<String, int>();
+      // TODO : store the error in a variable to display in the UI
+    });
+    // TODO : show a SnackBar or error message
   }
 
   // methods
