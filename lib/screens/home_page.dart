@@ -233,35 +233,47 @@ class _ItemMenuAndSelectionPanelState extends State<ItemMenuAndSelectionPanel> {
     }
 
     String newSaleId = '';
-    await widget.db.collection('sales').add({
-      'totalCost': _itemTotal,
-      'timestamp': FieldValue.serverTimestamp()
-    }).then((DocumentReference doc) {
-      newSaleId = doc.id;
-    });
 
-    for (var entry in _selectedItems.entries) {
-      await widget.db.collection('saleitems').add({
-        'saleId': newSaleId,
-        'item': entry.key,
-        'quantity': entry.value,
+    try{
+      await widget.db.collection('sales').add({
+        'totalCost': _itemTotal,
+        'timestamp': FieldValue.serverTimestamp()
+      }).then((DocumentReference doc) {
+        newSaleId = doc.id;
       });
+
+      for (var entry in _selectedItems.entries) {
+        await widget.db.collection('saleitems').add({
+          'saleId': newSaleId,
+          'item': entry.key,
+          'quantity': entry.value,
+        });
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Sale closed successfully!'),
+          backgroundColor: Theme.of(context).colorScheme.primary,
+        ),
+      );
+
+      setState(() {
+        _itemTotal = 0.0;
+        _paidAmount = 0.0;
+        _balance = 0.0;
+        _selectedItems.clear();
+      });
+      _amountReceivedController.clear();
+    } catch (error){
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error saving sale: ${error.toString()}'),
+          backgroundColor: Colors.red,
+          duration: Durations.extralong4
+        ),
+      );
     }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Sale closed successfully!'),
-        backgroundColor: Theme.of(context).colorScheme.primary,
-      ),
-    );
-
-    setState(() {
-      _itemTotal = 0.0;
-      _paidAmount = 0.0;
-      _balance = 0.0;
-      _selectedItems.clear();
-    });
-    _amountReceivedController.clear();
   }
 
   void confirmPayment() {
