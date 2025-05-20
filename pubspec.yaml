@@ -51,6 +51,7 @@ dev_dependencies:
   # rules and activating additional ones.
   flutter_lints: ^5.0.0
   flutter_launcher_icons: ^0.14.3
+  flutter_native_splash: ^2.3.13
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -98,3 +99,35 @@ flutter_launcher_icons:
   android: "ic_launcher"
   ios: true
   image_path: "assets/icon/app_icon.png"
+  adaptive_icon_background: "#FFFFFF"  # Or any color of your choice
+  adaptive_icon_foreground: "assets/icon/app_icon.png"
+  min_sdk_android: 21
+  remove_alpha_ios: true
+  web:
+    generate: false
+  windows:
+    generate: false
+  macos:
+    generate: false
+
+# Flutter Native Splash Screen Configuration
+flutter_native_splash:
+  # Background color
+  color: "#f7dfd7"
+  # Or use a background image
+  # background_image: "assets/background.png"
+
+  # App icon image
+  image: "assets/icon/app_splash.png"
+
+  # Customize icon size (make it larger)
+#  image_size: 200
+
+  # Customize icon appearance on different platforms
+  android_12:
+    image: "assets/icon/app_splash.png"
+    icon_background_color: "#FFFFFF"
+#    image_size: 300  # Even larger for Android 12
+
+  # Full screen splash
+  fullscreen: true
