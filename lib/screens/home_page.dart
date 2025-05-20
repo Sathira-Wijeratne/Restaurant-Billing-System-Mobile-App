@@ -59,6 +59,7 @@ class ItemMenuAndSelectionPanel extends StatefulWidget {
 }
 
 class _ItemMenuAndSelectionPanelState extends State<ItemMenuAndSelectionPanel> {
+  //
   double _itemTotal = 0.00, _balance = 0.00, _paidAmount = 0.00;
   Map<String, int> _selectedItems = {}; // LinkedHashMap
   late TextEditingController _amountReceivedController;
@@ -227,10 +228,11 @@ class _ItemMenuAndSelectionPanelState extends State<ItemMenuAndSelectionPanel> {
                                 // update selection total
                                 updateTotal(price);
 
+                                // notify success
                                 ScaffoldMessenger.of(context).hideCurrentSnackBar();
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
-                                    content: Text('Clicked: ${item['itemName']}'),
+                                    content: Text('\'${item['itemName']}\' added'),
                                     duration: Durations.medium1,
                                   ),
                                 );
