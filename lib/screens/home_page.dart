@@ -54,16 +54,6 @@ class _HomePageState extends State<HomePage> {
         title: Text(widget.title),
         backgroundColor: Theme.of(context).colorScheme.primary,
         foregroundColor: Theme.of(context).colorScheme.onPrimary,
-        actions: [
-          // Network status indicator
-          Padding(
-            padding: const EdgeInsets.only(right: 16.0),
-            child: Icon(
-              _isConnected ? Icons.wifi : Icons.wifi_off,
-              color: _isConnected ? Colors.white : Colors.red,
-            ),
-          ),
-        ],
       ),
       body: !_isConnected
           ? _buildOfflineWidget()
