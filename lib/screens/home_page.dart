@@ -274,7 +274,7 @@ class _ItemMenuAndSelectionPanelState extends State<ItemMenuAndSelectionPanel> {
                       ),
                     if (_selectedItems.isNotEmpty)
                       Container(
-                        height: 110,
+                        height: 120,
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(8),
@@ -285,16 +285,20 @@ class _ItemMenuAndSelectionPanelState extends State<ItemMenuAndSelectionPanel> {
                           children: [
                             ..._selectedItems.entries.map(
                               (entry) => Padding(
-                                padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
+                                padding: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 16.0),
                                 child: Row(
                                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                   children: [
-                                    Text(
-                                      entry.key,
-                                      style: Theme.of(context).textTheme.bodyMedium,
+                                    Expanded(
+                                      child: Text(
+                                        entry.key,
+                                        style: Theme.of(context).textTheme.bodyMedium,
+                                        overflow: TextOverflow.ellipsis,
+                                        maxLines: 1,
+                                      ),
                                     ),
                                     Container(
-                                      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                                      padding: EdgeInsets.symmetric(horizontal: 6, vertical: 1),
                                       decoration: BoxDecoration(
                                         color: Theme.of(context).cardTheme.color,
                                         borderRadius: BorderRadius.circular(12),
@@ -366,7 +370,7 @@ class _ItemMenuAndSelectionPanelState extends State<ItemMenuAndSelectionPanel> {
                                 isTotal: true,
                               ),
                               _SummaryRow(
-                                label: 'Paid Amount',
+                                label: 'Paid \nAmount',
                                 value: 'Rs.${_paidAmount.toStringAsFixed(2)}',
                               ),
                               _SummaryRow(
@@ -446,28 +450,38 @@ class _MenuList extends StatelessWidget {
             itemCount: items.length,
             itemBuilder: (context, index) {
               final item = items[index];
-              return Container(
-                margin: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  border: Border.all(color: Theme.of(context).inputDecorationTheme.border!.borderSide.color),
+              return Card(
+                margin: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                color: Colors.white,
+                elevation: 0.5,
+                shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8),
+                  side: BorderSide(color: Theme.of(context).inputDecorationTheme.border!.borderSide.color),
                 ),
-                child: ListTile(
-                  contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                  title: Text(
-                    item['itemName']?.toString() ?? 'No Name',
-                    style: TextStyle(
-                      color: Color(0xFF5F4B32),
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  subtitle: Text(
-                    'Rs.${item['itemPrice']?.toString() ?? 'N/A'}',
-                    style: TextStyle(
-                      color: Theme.of(context).colorScheme.primary,
-                      fontWeight: FontWeight.bold,
-                    ),
+                child: Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          item['itemName']?.toString() ?? 'No Name',
+                          style: TextStyle(
+                            color: Color(0xFF5F4B32),
+                            fontWeight: FontWeight.w600,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
+                        ),
+                      ),
+                      Text(
+                        'Rs.${item['itemPrice']?.toString() ?? 'N/A'}',
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.primary,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               );
@@ -520,14 +534,15 @@ class _SelectionPanel extends StatelessWidget {
             itemCount: items.length,
             itemBuilder: (context, index) {
               final item = items[index];
-              return Container(
-                margin: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  border: Border.all(color: Theme.of(context).inputDecorationTheme.border!.borderSide.color),
+              return Card(
+                margin: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                color: Colors.white,
+                elevation: 0.5,
+                shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8),
+                  side: BorderSide(color: Theme.of(context).inputDecorationTheme.border!.borderSide.color),
                 ),
-                child: ListTile(
+                child: InkWell(
                   onTap: () {
                     selectItems(item['itemName']);
                     double price = (item['itemPrice'] as num).toDouble();
@@ -542,17 +557,30 @@ class _SelectionPanel extends StatelessWidget {
                       ),
                     );
                   },
-                  contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                  title: Text(
-                    item['itemName']?.toString() ?? 'No Name',
-                    style: TextStyle(
-                      color: Theme.of(context).colorScheme.primary,
-                      fontWeight: FontWeight.w600,
+                  borderRadius: BorderRadius.circular(8),
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            item['itemName']?.toString() ?? 'No Name',
+                            style: TextStyle(
+                              color: Theme.of(context).colorScheme.primary,
+                              fontWeight: FontWeight.w600,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 1,
+                          ),
+                        ),
+                        Icon(
+                          Icons.add_circle,
+                          color: Theme.of(context).colorScheme.primary,
+                          size: 20,
+                        ),
+                      ],
                     ),
-                  ),
-                  trailing: Icon(
-                    Icons.add_circle,
-                    color: Theme.of(context).colorScheme.primary,
                   ),
                 ),
               );
@@ -587,17 +615,22 @@ class _SummaryRow extends StatelessWidget {
           Text(
             label,
             style: TextStyle(
-              fontWeight: isTotal || isBalance ? FontWeight.bold : FontWeight.normal,
-              fontSize: isTotal || isBalance ? 16 : 14,
+              fontWeight: FontWeight.bold,
+              fontSize: 16,
               color: isTotal ? Color(0xFF5F4B32) : (isBalance ? Theme.of(context).colorScheme.primary : Color(0xFF2C2C2C)),
             ),
           ),
-          Text(
-            value,
-            style: TextStyle(
-              fontWeight: isTotal || isBalance ? FontWeight.bold : FontWeight.normal,
-              fontSize: isTotal || isBalance ? 16 : 14,
-              color: isTotal ? Color(0xFF5F4B32) : (isBalance ? Theme.of(context).colorScheme.primary : Color(0xFF2C2C2C)),
+          Expanded(
+            child: Text(
+              value,
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+                color: isTotal ? Color(0xFF5F4B32) : (isBalance ? Theme.of(context).colorScheme.primary : Color(0xFF2C2C2C)),
+              ),
+              textAlign: TextAlign.right,
+              overflow: TextOverflow.ellipsis,
+              maxLines: 1,
             ),
           ),
         ],
