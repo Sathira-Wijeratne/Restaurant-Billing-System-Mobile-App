@@ -24,9 +24,9 @@ class _HomePageState extends State<HomePage> {
         stream: db.collection("items").snapshots(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(
+            return Center(
               child: CircularProgressIndicator(
-                color: Color(0xFF8D2B0B), // Primary brick red
+                color: Theme.of(context).colorScheme.primary, // Primary brick red
               )
             );
           }
@@ -112,7 +112,7 @@ class _ItemMenuAndSelectionPanelState extends State<ItemMenuAndSelectionPanel> {
         SnackBar(
           content: Text('No items selected'),
           duration: Durations.extralong1,
-          backgroundColor: Color(0xFF8D2B0B),
+          backgroundColor: Theme.of(context).colorScheme.primary,
         ),
       );
       return false;
@@ -163,7 +163,7 @@ class _ItemMenuAndSelectionPanelState extends State<ItemMenuAndSelectionPanel> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text('Sale closed successfully!'),
-        backgroundColor: Color(0xFF8D2B0B),
+        backgroundColor: Theme.of(context).colorScheme.primary,
       ),
     );
 
@@ -278,7 +278,7 @@ class _ItemMenuAndSelectionPanelState extends State<ItemMenuAndSelectionPanel> {
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Color(0xFFE8E0D0)),
+                          border: Border.all(color: Theme.of(context).inputDecorationTheme.border!.borderSide.color),
                         ),
                         child: ListView(
                           shrinkWrap: true,
@@ -296,9 +296,9 @@ class _ItemMenuAndSelectionPanelState extends State<ItemMenuAndSelectionPanel> {
                                     Container(
                                       padding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                                       decoration: BoxDecoration(
-                                        color: Color(0xFFF5EBD5),
+                                        color: Theme.of(context).cardTheme.color,
                                         borderRadius: BorderRadius.circular(12),
-                                        border: Border.all(color: Color(0xFFE8E0D0)),
+                                        border: Border.all(color: Theme.of(context).inputDecorationTheme.border!.borderSide.color),
                                       ),
                                       child: Text(
                                         '×${entry.value}',
@@ -326,7 +326,11 @@ class _ItemMenuAndSelectionPanelState extends State<ItemMenuAndSelectionPanel> {
                               decoration: InputDecoration(
                                 labelText: 'Amount Received',
                                 errorText: _paymentError,
-                                prefixIcon: Icon(Icons.attach_money, color: Color(0xFF8D2B0B)),
+                                floatingLabelBehavior: FloatingLabelBehavior.always,
+                                labelStyle: TextStyle(
+                                  color: Theme.of(context).colorScheme.primary,
+                                ),
+                                prefixText: 'Rs.'
                               ),
                             ),
                           ),
@@ -417,16 +421,22 @@ class _MenuList extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Container(
-          width: double.infinity,
-          color: Color(0xFF8D2B0B),
-          padding: EdgeInsets.all(12.0),
-          child: Text(
-            'Menu',
-            style: TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-              fontSize: 18,
+        ClipRRect(
+          borderRadius: BorderRadius.only(
+            topLeft: Radius.circular(12),
+            topRight: Radius.circular(12)
+          ),
+          child: Container(
+            width: double.infinity,
+            color: Theme.of(context).colorScheme.primary,
+            padding: EdgeInsets.all(12.0),
+            child: Text(
+              'Menu',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 18,
+              ),
             ),
           ),
         ),
@@ -440,7 +450,7 @@ class _MenuList extends StatelessWidget {
                 margin: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  border: Border.all(color: Color(0xFFE8E0D0)),
+                  border: Border.all(color: Theme.of(context).inputDecorationTheme.border!.borderSide.color),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: ListTile(
@@ -455,7 +465,7 @@ class _MenuList extends StatelessWidget {
                   subtitle: Text(
                     'Rs.${item['itemPrice']?.toString() ?? 'N/A'}',
                     style: TextStyle(
-                      color: Color(0xFF8D2B0B),
+                      color: Theme.of(context).colorScheme.primary,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -485,16 +495,22 @@ class _SelectionPanel extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Container(
-          width: double.infinity,
-          color: Color(0xFF8D2B0B),
-          padding: EdgeInsets.all(12.0),
-          child: Text(
-            'Select Items',
-            style: TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-              fontSize: 18,
+        ClipRRect(
+          borderRadius: BorderRadius.only(
+            topLeft: Radius.circular(12),
+            topRight: Radius.circular(12),
+          ),
+          child: Container(
+            width: double.infinity,
+            color: Theme.of(context).colorScheme.primary,
+            padding: EdgeInsets.all(12.0),
+            child: Text(
+              'Select Items',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 18,
+              ),
             ),
           ),
         ),
@@ -508,7 +524,7 @@ class _SelectionPanel extends StatelessWidget {
                 margin: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  border: Border.all(color: Color(0xFFE8E0D0)),
+                  border: Border.all(color: Theme.of(context).inputDecorationTheme.border!.borderSide.color),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: ListTile(
@@ -522,7 +538,7 @@ class _SelectionPanel extends StatelessWidget {
                       SnackBar(
                         content: Text('\'${item['itemName']}\' added'),
                         duration: Durations.medium1,
-                        backgroundColor: Color(0xFF8D2B0B),
+                        backgroundColor: Theme.of(context).colorScheme.primary,
                       ),
                     );
                   },
@@ -530,14 +546,13 @@ class _SelectionPanel extends StatelessWidget {
                   title: Text(
                     item['itemName']?.toString() ?? 'No Name',
                     style: TextStyle(
-                      color: Color(0xFF8D2B0B),
+                      color: Theme.of(context).colorScheme.primary,
                       fontWeight: FontWeight.w600,
-                      decoration: TextDecoration.underline,
                     ),
                   ),
                   trailing: Icon(
                     Icons.add_circle,
-                    color: Color(0xFF8D2B0B),
+                    color: Theme.of(context).colorScheme.primary,
                   ),
                 ),
               );
@@ -574,7 +589,7 @@ class _SummaryRow extends StatelessWidget {
             style: TextStyle(
               fontWeight: isTotal || isBalance ? FontWeight.bold : FontWeight.normal,
               fontSize: isTotal || isBalance ? 16 : 14,
-              color: isTotal ? Color(0xFF5F4B32) : (isBalance ? Color(0xFF8D2B0B) : Color(0xFF2C2C2C)),
+              color: isTotal ? Color(0xFF5F4B32) : (isBalance ? Theme.of(context).colorScheme.primary : Color(0xFF2C2C2C)),
             ),
           ),
           Text(
@@ -582,7 +597,7 @@ class _SummaryRow extends StatelessWidget {
             style: TextStyle(
               fontWeight: isTotal || isBalance ? FontWeight.bold : FontWeight.normal,
               fontSize: isTotal || isBalance ? 16 : 14,
-              color: isTotal ? Color(0xFF5F4B32) : (isBalance ? Color(0xFF8D2B0B) : Color(0xFF2C2C2C)),
+              color: isTotal ? Color(0xFF5F4B32) : (isBalance ? Theme.of(context).colorScheme.primary : Color(0xFF2C2C2C)),
             ),
           ),
         ],
