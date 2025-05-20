@@ -1,12 +1,18 @@
 import 'package:billingapp/screens/home_page.dart';
+import 'package:billingapp/services/network_service.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/services.dart';
 
 Future<void> main() async {
-  // initialize Firebase
+  // initialize Flutter binding
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // initialize Firebase
   await Firebase.initializeApp();
+  
+  // initialize NetworkService
+  NetworkService().initialize();
 
   // set preferred orientations
   await SystemChrome.setPreferredOrientations(([

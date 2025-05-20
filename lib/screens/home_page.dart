@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:billingapp/services/network_service.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key, required this.title});
@@ -11,6 +12,40 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   final db = FirebaseFirestore.instance;
+  final NetworkService _networkService = NetworkService();
+  bool _isConnected = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _isConnected = _networkService.isConnected;
+    _networkService.connectivityStream.listen((isConnected) {
+      setState(() {
+        _isConnected = isConnected;
+      });
+
+      if (!isConnected) {
+        _showOfflineSnackbar();
+      }
+    });
+  }
+
+  void _showOfflineSnackbar() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('You are currently offline. Some features may be unavailable.'),
+        backgroundColor: Colors.red,
+        duration: Duration(days: 1), // until connection is back
+        action: SnackBarAction(
+          label: 'Dismiss',
+          textColor: Colors.white,
+          onPressed: () {
+            ScaffoldMessenger.of(context).hideCurrentSnackBar();
+          },
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -19,34 +54,80 @@ class _HomePageState extends State<HomePage> {
         title: Text(widget.title),
         backgroundColor: Theme.of(context).colorScheme.primary,
         foregroundColor: Theme.of(context).colorScheme.onPrimary,
+        actions: [
+          // Network status indicator
+          Padding(
+            padding: const EdgeInsets.only(right: 16.0),
+            child: Icon(
+              _isConnected ? Icons.wifi : Icons.wifi_off,
+              color: _isConnected ? Colors.white : Colors.red,
+            ),
+          ),
+        ],
       ),
-      body: StreamBuilder<QuerySnapshot>(
-        stream: db.collection("items").snapshots(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return Center(
-              child: CircularProgressIndicator(
-                color: Theme.of(context).colorScheme.primary, // Primary brick red
-              )
-            );
-          }
-          if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
-          }
-          final docs = snapshot.data?.docs ?? [];
-          final items = docs.map((doc) => doc.data() as Map<String, dynamic>).toList();
+      body: !_isConnected
+          ? _buildOfflineWidget()
+          : StreamBuilder<QuerySnapshot>(
+              stream: db.collection("items").snapshots(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return Center(
+                    child: CircularProgressIndicator(
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                  );
+                }
+                if (snapshot.hasError) {
+                  return Center(child: Text('Error: ${snapshot.error}'));
+                }
+                final docs = snapshot.data?.docs ?? [];
+                final items = docs.map((doc) => doc.data() as Map<String, dynamic>).toList();
 
-          if (items.isEmpty) {
-            return Center(
-              child: Text(
-                'No items found.',
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
-            );
-          }
+                if (items.isEmpty) {
+                  return Center(
+                    child: Text(
+                      'No items found.',
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
+                  );
+                }
 
-          return ItemMenuAndSelectionPanel(items: items, db: db);
-        },
+                return ItemMenuAndSelectionPanel(items: items, db: db, isConnected: _isConnected);
+              },
+            ),
+    );
+  }
+
+  Widget _buildOfflineWidget() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.cloud_off,
+            size: 80,
+            color: Color(0xFF8D2B0B),
+          ),
+          SizedBox(height: 16),
+          Text(
+            'You are offline',
+            style: Theme.of(context).textTheme.headlineMedium,
+          ),
+          SizedBox(height: 8),
+          Text(
+            'Please check your internet connection',
+            style: Theme.of(context).textTheme.bodyLarge,
+            textAlign: TextAlign.center,
+          ),
+          SizedBox(height: 24),
+          ElevatedButton.icon(
+            onPressed: () {
+              setState(() {}); // Refresh the UI
+            },
+            icon: Icon(Icons.refresh),
+            label: Text('Retry'),
+          ),
+        ],
       ),
     );
   }
@@ -55,7 +136,14 @@ class _HomePageState extends State<HomePage> {
 class ItemMenuAndSelectionPanel extends StatefulWidget {
   final List<Map<String, dynamic>> items;
   final FirebaseFirestore db;
-  const ItemMenuAndSelectionPanel({super.key, required this.items, required this.db});
+  final bool isConnected;
+
+  const ItemMenuAndSelectionPanel({
+    super.key,
+    required this.items,
+    required this.db,
+    required this.isConnected,
+  });
 
   @override
   State<ItemMenuAndSelectionPanel> createState() => _ItemMenuAndSelectionPanelState();
@@ -93,7 +181,7 @@ class _ItemMenuAndSelectionPanelState extends State<ItemMenuAndSelectionPanel> {
       _balance = 0.0;
       _paymentError = null;
     });
-      _amountReceivedController.clear();
+    _amountReceivedController.clear();
   }
 
   void selectItems(String itemName) {
@@ -120,10 +208,10 @@ class _ItemMenuAndSelectionPanelState extends State<ItemMenuAndSelectionPanel> {
     return true;
   }
 
-  String? _validateAmountReceived(){
+  String? _validateAmountReceived() {
     double? received = double.tryParse(_amountReceivedController.text);
 
-    if (received == null || received < _itemTotal){
+    if (received == null || received < _itemTotal) {
       return 'Enter a valid amount';
     }
 
@@ -131,12 +219,22 @@ class _ItemMenuAndSelectionPanelState extends State<ItemMenuAndSelectionPanel> {
   }
 
   void closeSale() async {
+    if (!widget.isConnected) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Cannot complete sale while offline'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
     if (!_checkIsItemsSelected()) {
       return;
     }
 
     final String? error = _validateAmountReceived();
-    if (error != null){
+    if (error != null) {
       setState(() {
         _paymentError = error;
       });
@@ -185,12 +283,11 @@ class _ItemMenuAndSelectionPanelState extends State<ItemMenuAndSelectionPanel> {
 
     setState(() {
       _paymentError = error;
-      if (error == null){
+      if (error == null) {
         double received = double.parse(_amountReceivedController.text);
         _paidAmount = received;
         _balance = received - _itemTotal;
-      }
-      else {
+      } else {
         _paidAmount = 0.0;
         _balance = 0.0;
       }
@@ -201,54 +298,54 @@ class _ItemMenuAndSelectionPanelState extends State<ItemMenuAndSelectionPanel> {
   Widget build(BuildContext context) {
     final items = widget.items;
     final isSmallScreen = MediaQuery.of(context).size.width < 600;
-    
+
     return LayoutBuilder(
       builder: (context, constraints) {
         return Column(
           children: [
             Expanded(
               child: !isSmallScreen
-                ? Column(
-                    children: [
-                      Expanded(
-                        child: Card(
-                          margin: const EdgeInsets.all(8),
-                          child: _MenuList(items: items),
-                        ),
-                      ),
-                      Expanded(
-                        child: Card(
-                          margin: const EdgeInsets.all(8),
-                          child: _SelectionPanel(
-                            items: items,
-                            selectItems: selectItems,
-                            updateTotal: updateTotal,
+                  ? Column(
+                      children: [
+                        Expanded(
+                          child: Card(
+                            margin: const EdgeInsets.all(8),
+                            child: _MenuList(items: items),
                           ),
                         ),
-                      ),
-                    ],
-                  )
-                : Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        child: Card(
-                          margin: const EdgeInsets.all(12),
-                          child: _MenuList(items: items),
-                        ),
-                      ),
-                      Expanded(
-                        child: Card(
-                          margin: const EdgeInsets.all(12),
-                          child: _SelectionPanel(
-                            items: items,
-                            selectItems: selectItems,
-                            updateTotal: updateTotal,
+                        Expanded(
+                          child: Card(
+                            margin: const EdgeInsets.all(8),
+                            child: _SelectionPanel(
+                              items: items,
+                              selectItems: selectItems,
+                              updateTotal: updateTotal,
+                            ),
                           ),
                         ),
-                      ),
-                    ],
-                  ),
+                      ],
+                    )
+                  : Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Card(
+                            margin: const EdgeInsets.all(12),
+                            child: _MenuList(items: items),
+                          ),
+                        ),
+                        Expanded(
+                          child: Card(
+                            margin: const EdgeInsets.all(12),
+                            child: _SelectionPanel(
+                              items: items,
+                              selectItems: selectItems,
+                              updateTotal: updateTotal,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
             ),
             Card(
               margin: const EdgeInsets.all(12),
@@ -334,7 +431,7 @@ class _ItemMenuAndSelectionPanelState extends State<ItemMenuAndSelectionPanel> {
                                 labelStyle: TextStyle(
                                   color: Theme.of(context).colorScheme.primary,
                                 ),
-                                prefixText: 'Rs.'
+                                prefixText: 'Rs.',
                               ),
                             ),
                           ),
@@ -427,9 +524,7 @@ class _MenuList extends StatelessWidget {
       children: [
         ClipRRect(
           borderRadius: BorderRadius.only(
-            topLeft: Radius.circular(12),
-            topRight: Radius.circular(12)
-          ),
+              topLeft: Radius.circular(12), topRight: Radius.circular(12)),
           child: Container(
             width: double.infinity,
             color: Theme.of(context).colorScheme.primary,
@@ -456,7 +551,12 @@ class _MenuList extends StatelessWidget {
                 elevation: 0.5,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8),
-                  side: BorderSide(color: Theme.of(context).inputDecorationTheme.border!.borderSide.color),
+                  side: BorderSide(
+                      color: Theme.of(context)
+                          .inputDecorationTheme
+                          .border!
+                          .borderSide
+                          .color),
                 ),
                 child: Padding(
                   padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -540,7 +640,12 @@ class _SelectionPanel extends StatelessWidget {
                 elevation: 0.5,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8),
-                  side: BorderSide(color: Theme.of(context).inputDecorationTheme.border!.borderSide.color),
+                  side: BorderSide(
+                      color: Theme.of(context)
+                          .inputDecorationTheme
+                          .border!
+                          .borderSide
+                          .color),
                 ),
                 child: InkWell(
                   onTap: () {
@@ -617,7 +722,11 @@ class _SummaryRow extends StatelessWidget {
             style: TextStyle(
               fontWeight: FontWeight.bold,
               fontSize: 16,
-              color: isTotal ? Color(0xFF5F4B32) : (isBalance ? Theme.of(context).colorScheme.primary : Color(0xFF2C2C2C)),
+              color: isTotal
+                  ? Color(0xFF5F4B32)
+                  : (isBalance
+                      ? Theme.of(context).colorScheme.primary
+                      : Color(0xFF2C2C2C)),
             ),
           ),
           Expanded(
@@ -626,7 +735,11 @@ class _SummaryRow extends StatelessWidget {
               style: TextStyle(
                 fontWeight: FontWeight.bold,
                 fontSize: 16,
-                color: isTotal ? Color(0xFF5F4B32) : (isBalance ? Theme.of(context).colorScheme.primary : Color(0xFF2C2C2C)),
+                color: isTotal
+                    ? Color(0xFF5F4B32)
+                    : (isBalance
+                        ? Theme.of(context).colorScheme.primary
+                        : Color(0xFF2C2C2C)),
               ),
               textAlign: TextAlign.right,
               overflow: TextOverflow.ellipsis,
