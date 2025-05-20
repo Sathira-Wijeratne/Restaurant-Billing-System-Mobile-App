@@ -1,12 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-// import 'package:uuid/uuid.dart';
 
-/**
- * TODO :
- *  Make app responsive
- *
- */
 class HomePage extends StatefulWidget {
   const HomePage({super.key, required this.title});
   final String title;
@@ -16,7 +10,6 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  //
   final db = FirebaseFirestore.instance;
 
   @override
@@ -24,13 +17,18 @@ class _HomePageState extends State<HomePage> {
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.title),
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+        backgroundColor: Theme.of(context).colorScheme.primary,
+        foregroundColor: Theme.of(context).colorScheme.onPrimary,
       ),
       body: StreamBuilder<QuerySnapshot>(
         stream: db.collection("items").snapshots(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return const Center(
+              child: CircularProgressIndicator(
+                color: Color(0xFF8D2B0B), // Primary brick red
+              )
+            );
           }
           if (snapshot.hasError) {
             return Center(child: Text('Error: ${snapshot.error}'));
@@ -39,7 +37,12 @@ class _HomePageState extends State<HomePage> {
           final items = docs.map((doc) => doc.data() as Map<String, dynamic>).toList();
 
           if (items.isEmpty) {
-            return const Center(child: Text('No items found.'));
+            return Center(
+              child: Text(
+                'No items found.',
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+            );
           }
 
           return ItemMenuAndSelectionPanel(items: items, db: db);
@@ -59,9 +62,8 @@ class ItemMenuAndSelectionPanel extends StatefulWidget {
 }
 
 class _ItemMenuAndSelectionPanelState extends State<ItemMenuAndSelectionPanel> {
-  //
   double _itemTotal = 0.00, _balance = 0.00, _paidAmount = 0.00;
-  Map<String, int> _selectedItems = {}; // LinkedHashMap
+  Map<String, int> _selectedItems = {};
   late TextEditingController _amountReceivedController;
   String? _paymentError;
 
@@ -104,11 +106,14 @@ class _ItemMenuAndSelectionPanelState extends State<ItemMenuAndSelectionPanel> {
     });
   }
 
-  // helper methods
   bool _checkIsItemsSelected() {
     if (_selectedItems.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('No items selected'), duration: Durations.extralong1,),
+        SnackBar(
+          content: Text('No items selected'),
+          duration: Durations.extralong1,
+          backgroundColor: Color(0xFF8D2B0B),
+        ),
       );
       return false;
     }
@@ -126,12 +131,10 @@ class _ItemMenuAndSelectionPanelState extends State<ItemMenuAndSelectionPanel> {
   }
 
   void closeSale() async {
-    // validate items present
     if (!_checkIsItemsSelected()) {
       return;
     }
 
-    // validate amount entered
     final String? error = _validateAmountReceived();
     if (error != null){
       setState(() {
@@ -158,7 +161,10 @@ class _ItemMenuAndSelectionPanelState extends State<ItemMenuAndSelectionPanel> {
     }
 
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Sale closed successfully!')),
+      SnackBar(
+        content: Text('Sale closed successfully!'),
+        backgroundColor: Color(0xFF8D2B0B),
+      ),
     );
 
     setState(() {
@@ -194,176 +200,210 @@ class _ItemMenuAndSelectionPanelState extends State<ItemMenuAndSelectionPanel> {
   @override
   Widget build(BuildContext context) {
     final items = widget.items;
-    return Column(
-      children: [
-        Expanded(
-          child: Row(
-            children: [
-              // Left: Name and Price
-              Expanded(
-                child: _MenuList(items: items),
-              ),
-              // Right: Clickable Names
-              Expanded(
+    final isSmallScreen = MediaQuery.of(context).size.width < 600;
+    
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return Column(
+          children: [
+            Expanded(
+              child: !isSmallScreen
+                ? Column(
+                    children: [
+                      Expanded(
+                        child: Card(
+                          margin: const EdgeInsets.all(8),
+                          child: _MenuList(items: items),
+                        ),
+                      ),
+                      Expanded(
+                        child: Card(
+                          margin: const EdgeInsets.all(8),
+                          child: _SelectionPanel(
+                            items: items,
+                            selectItems: selectItems,
+                            updateTotal: updateTotal,
+                          ),
+                        ),
+                      ),
+                    ],
+                  )
+                : Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Card(
+                          margin: const EdgeInsets.all(12),
+                          child: _MenuList(items: items),
+                        ),
+                      ),
+                      Expanded(
+                        child: Card(
+                          margin: const EdgeInsets.all(12),
+                          child: _SelectionPanel(
+                            items: items,
+                            selectItems: selectItems,
+                            updateTotal: updateTotal,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+            ),
+            Card(
+              margin: const EdgeInsets.all(12),
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Padding(
-                      padding: EdgeInsets.all(8.0),
+                      padding: const EdgeInsets.only(bottom: 12.0),
                       child: Text(
-                        'Select Items',
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                        'Checkout Items',
+                        style: Theme.of(context).textTheme.titleLarge,
                       ),
                     ),
-                    Expanded(
-                      child: ListView.builder(
-                        itemCount: items.length,
-                        itemBuilder: (context, index) {
-                          final item = items[index];
-                          return ListTile(
-                            title: InkWell(
-                              onTap: () {
-                                selectItems(item['itemName']);
-                                double price = (item['itemPrice'] as num).toDouble();
-                                // update selection total
-                                updateTotal(price);
-
-                                // notify success
-                                ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text('\'${item['itemName']}\' added'),
-                                    duration: Durations.medium1,
-                                  ),
-                                );
-                              },
-                              child: Text(
-                                item['itemName']?.toString() ?? 'No Name',
-                                style: const TextStyle(
-                                  color: Colors.blue,
-                                  decoration: TextDecoration.underline,
+                    if (_selectedItems.isEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 12.0),
+                        child: Text(
+                          'No items selected',
+                          style: Theme.of(context).textTheme.bodyMedium,
+                        ),
+                      ),
+                    if (_selectedItems.isNotEmpty)
+                      Container(
+                        height: 110,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Color(0xFFE8E0D0)),
+                        ),
+                        child: ListView(
+                          shrinkWrap: true,
+                          children: [
+                            ..._selectedItems.entries.map(
+                              (entry) => Padding(
+                                padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      entry.key,
+                                      style: Theme.of(context).textTheme.bodyMedium,
+                                    ),
+                                    Container(
+                                      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                                      decoration: BoxDecoration(
+                                        color: Color(0xFFF5EBD5),
+                                        borderRadius: BorderRadius.circular(12),
+                                        border: Border.all(color: Color(0xFFE8E0D0)),
+                                      ),
+                                      child: Text(
+                                        '×${entry.value}',
+                                        style: TextStyle(
+                                          color: Color(0xFF5F4B32),
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
                             ),
-                          );
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-        // Checkout and summary widgets
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: Text(
-                'Checkout Items',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-              ),
-            ),
-            if (_selectedItems.isEmpty)
-              Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: Text(
-                  'No items selected',
-                  style: TextStyle(
-                    fontSize: 16,
-                  ),
-                ),
-              ),
-            if (_selectedItems.isNotEmpty)
-              SizedBox(
-                height: 110,
-                child: ListView(
-                  shrinkWrap: true,
-                  children: [
-                    ..._selectedItems.entries.map(
-                          (entry) => Center(
-                        child: Text(
-                          '${entry.key} x${entry.value}',
-                          style: TextStyle(fontSize: 16),
+                          ],
                         ),
                       ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 16.0),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              controller: _amountReceivedController,
+                              keyboardType: TextInputType.numberWithOptions(decimal: true),
+                              decoration: InputDecoration(
+                                labelText: 'Amount Received',
+                                errorText: _paymentError,
+                                prefixIcon: Icon(Icons.attach_money, color: Color(0xFF8D2B0B)),
+                              ),
+                            ),
+                          ),
+                          SizedBox(width: 16),
+                          ElevatedButton.icon(
+                            onPressed: confirmPayment,
+                            icon: Icon(Icons.check_circle),
+                            label: Text('Confirm Payment'),
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                 ),
               ),
-            Padding(
-              padding:
-              const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _amountReceivedController,
-                      keyboardType:
-                      TextInputType.numberWithOptions(decimal: true),
-                      decoration: InputDecoration(
-                        labelText: 'Amount Received',
-                        errorText: _paymentError,
-                      ),
-                    ),
-                  ),
-                  SizedBox(width: 8),
-                  ElevatedButton(
-                    onPressed: confirmPayment,
-                    child: Text('Confirm Payment'),
-                  ),
-                ],
-              ),
             ),
-          ],
-        ),
-        Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: Row(
-            children: [
-              Expanded(
+            Card(
+              margin: const EdgeInsets.all(12),
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: Text(
-                          'Total: \Rs.${_itemTotal.toStringAsFixed(2)}'),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: Text(
-                          'Paid Amount: Rs.${_paidAmount.toStringAsFixed(2)}'),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: Text(
-                          'Balance: Rs.${_balance.toStringAsFixed(2)}'),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _SummaryRow(
+                                label: 'Total',
+                                value: 'Rs.${_itemTotal.toStringAsFixed(2)}',
+                                isTotal: true,
+                              ),
+                              _SummaryRow(
+                                label: 'Paid Amount',
+                                value: 'Rs.${_paidAmount.toStringAsFixed(2)}',
+                              ),
+                              _SummaryRow(
+                                label: 'Balance',
+                                value: 'Rs.${_balance.toStringAsFixed(2)}',
+                                isBalance: true,
+                              ),
+                            ],
+                          ),
+                        ),
+                        SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              ElevatedButton.icon(
+                                onPressed: resetSale,
+                                icon: Icon(Icons.refresh),
+                                label: Text('Reset Sale'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.grey.shade700,
+                                ),
+                              ),
+                              SizedBox(height: 12),
+                              ElevatedButton.icon(
+                                onPressed: closeSale,
+                                icon: Icon(Icons.check),
+                                label: Text('Close Sale'),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
               ),
-              Expanded(
-                child: Column(
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: ElevatedButton(
-                        onPressed: resetSale,
-                        child: Text('Reset sale'),
-                      ),
-                    ),
-                    ElevatedButton(
-                        onPressed: closeSale, child: Text('Close Sale'))
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
+            ),
+          ],
+        );
+      },
     );
   }
 }
@@ -377,26 +417,176 @@ class _MenuList extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Padding(
-          padding: EdgeInsets.all(8.0),
+        Container(
+          width: double.infinity,
+          color: Color(0xFF8D2B0B),
+          padding: EdgeInsets.all(12.0),
           child: Text(
             'Menu',
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            style: TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+              fontSize: 18,
+            ),
           ),
         ),
         Expanded(
           child: ListView.builder(
+            padding: EdgeInsets.symmetric(vertical: 8),
             itemCount: items.length,
             itemBuilder: (context, index) {
               final item = items[index];
-              return ListTile(
-                title: Text(item['itemName']?.toString() ?? 'No Name'),
-                subtitle: Text('Rs.${item['itemPrice']?.toString() ?? 'N/A'}'),
+              return Container(
+                margin: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  border: Border.all(color: Color(0xFFE8E0D0)),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: ListTile(
+                  contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  title: Text(
+                    item['itemName']?.toString() ?? 'No Name',
+                    style: TextStyle(
+                      color: Color(0xFF5F4B32),
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  subtitle: Text(
+                    'Rs.${item['itemPrice']?.toString() ?? 'N/A'}',
+                    style: TextStyle(
+                      color: Color(0xFF8D2B0B),
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
               );
             },
           ),
         ),
       ],
+    );
+  }
+}
+
+class _SelectionPanel extends StatelessWidget {
+  final List<Map<String, dynamic>> items;
+  final void Function(String) selectItems;
+  final void Function(double) updateTotal;
+
+  const _SelectionPanel({
+    required this.items,
+    required this.selectItems,
+    required this.updateTotal,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: double.infinity,
+          color: Color(0xFF8D2B0B),
+          padding: EdgeInsets.all(12.0),
+          child: Text(
+            'Select Items',
+            style: TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+              fontSize: 18,
+            ),
+          ),
+        ),
+        Expanded(
+          child: ListView.builder(
+            padding: EdgeInsets.symmetric(vertical: 8),
+            itemCount: items.length,
+            itemBuilder: (context, index) {
+              final item = items[index];
+              return Container(
+                margin: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  border: Border.all(color: Color(0xFFE8E0D0)),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: ListTile(
+                  onTap: () {
+                    selectItems(item['itemName']);
+                    double price = (item['itemPrice'] as num).toDouble();
+                    updateTotal(price);
+
+                    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('\'${item['itemName']}\' added'),
+                        duration: Durations.medium1,
+                        backgroundColor: Color(0xFF8D2B0B),
+                      ),
+                    );
+                  },
+                  contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  title: Text(
+                    item['itemName']?.toString() ?? 'No Name',
+                    style: TextStyle(
+                      color: Color(0xFF8D2B0B),
+                      fontWeight: FontWeight.w600,
+                      decoration: TextDecoration.underline,
+                    ),
+                  ),
+                  trailing: Icon(
+                    Icons.add_circle,
+                    color: Color(0xFF8D2B0B),
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _SummaryRow extends StatelessWidget {
+  final String label;
+  final String value;
+  final bool isTotal;
+  final bool isBalance;
+
+  const _SummaryRow({
+    required this.label,
+    required this.value,
+    this.isTotal = false,
+    this.isBalance = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              fontWeight: isTotal || isBalance ? FontWeight.bold : FontWeight.normal,
+              fontSize: isTotal || isBalance ? 16 : 14,
+              color: isTotal ? Color(0xFF5F4B32) : (isBalance ? Color(0xFF8D2B0B) : Color(0xFF2C2C2C)),
+            ),
+          ),
+          Text(
+            value,
+            style: TextStyle(
+              fontWeight: isTotal || isBalance ? FontWeight.bold : FontWeight.normal,
+              fontSize: isTotal || isBalance ? 16 : 14,
+              color: isTotal ? Color(0xFF5F4B32) : (isBalance ? Color(0xFF8D2B0B) : Color(0xFF2C2C2C)),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
