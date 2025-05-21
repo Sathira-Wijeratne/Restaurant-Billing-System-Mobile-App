@@ -20,12 +20,15 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
+    // Initialize the network service
     _isConnected = _networkService.isConnected;
+    // Listen for connectivity changes
     _networkService.connectivityStream.listen((isConnected) {
       setState(() {
         _isConnected = isConnected;
       });
 
+      // Show snackbar if offline
       if (!isConnected) {
         _showOfflineSnackbar();
       }
@@ -57,6 +60,7 @@ class _HomePageState extends State<HomePage> {
         backgroundColor: Theme.of(context).colorScheme.primary,
         foregroundColor: Theme.of(context).colorScheme.onPrimary,
       ),
+      // Use NetworkAwareWidget to show different content based on connectivity
       body: !_isConnected
           ? _buildOfflineWidget()
           : StreamBuilder<QuerySnapshot>(
