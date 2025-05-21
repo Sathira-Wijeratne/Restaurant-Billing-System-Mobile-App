@@ -1,3 +1,5 @@
+import 'dart:collection';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:billingapp/services/network_service.dart';
@@ -144,6 +146,7 @@ class _ItemMenuAndSelectionPanelState extends State<ItemMenuAndSelectionPanel> {
   Map<String, int> _selectedItems = {};
   late TextEditingController _amountReceivedController;
   String? _paymentError;
+  Map<String, double> _itemPriceMap = HashMap();
 
   @override
   void initState() {
@@ -170,14 +173,16 @@ class _ItemMenuAndSelectionPanelState extends State<ItemMenuAndSelectionPanel> {
       _paidAmount = 0.0;
       _balance = 0.0;
       _paymentError = null;
+      _itemPriceMap.clear();
     });
     _amountReceivedController.clear();
   }
 
-  void selectItems(String itemName) {
+  void selectItems(String itemName, double itemPrice) {
     setState(() {
       if (!_selectedItems.containsKey(itemName)) {
         _selectedItems[itemName] = 1;
+        _itemPriceMap[itemName] = itemPrice;
       } else {
         _selectedItems.update(itemName, (value) => value + 1);
       }
@@ -198,6 +203,22 @@ class _ItemMenuAndSelectionPanelState extends State<ItemMenuAndSelectionPanel> {
     return true;
   }
 
+  bool _checkIsAmountPaid(){
+    if (_paidAmount == 0.0){
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Payment not confirmed'),
+          duration: Durations.extralong1,
+          backgroundColor: Theme.of(context).colorScheme.primary,
+        ),
+      );
+
+      return false;
+    }
+
+    return true;
+  }
+
   String? _validateAmountReceived() {
     double? received = double.tryParse(_amountReceivedController.text);
 
@@ -206,6 +227,36 @@ class _ItemMenuAndSelectionPanelState extends State<ItemMenuAndSelectionPanel> {
     }
 
     return null;
+  }
+
+  Future<String> generateSaleId () async {
+    String newSaleId = '';
+
+    try {
+      DocumentSnapshot counterDoc = await widget.db.collection('counters').doc('sales').get();
+      int counterValue = 1;
+
+      if (counterDoc.exists) {
+        counterValue = (counterDoc.data() as Map<String, dynamic>)['value'] + 1;
+      }
+
+      String formattedCounter = 'S${counterValue.toString().padLeft(3, '0')}';
+
+      await widget.db.collection('counters').doc('sales').set({
+        'value' : counterValue
+      }, SetOptions(merge: true)); // create new document if doesn't exist, if exist, update only value
+
+      newSaleId = formattedCounter;
+    } catch (error) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+            content: Text('Error generating sale ID : ${error.toString()}'),
+            backgroundColor: Colors.red,
+        ),
+      );
+    }
+
+    return newSaleId;
   }
 
   void closeSale() async {
@@ -219,7 +270,7 @@ class _ItemMenuAndSelectionPanelState extends State<ItemMenuAndSelectionPanel> {
       return;
     }
 
-    if (!_checkIsItemsSelected()) {
+    if (!_checkIsItemsSelected() || !_checkIsAmountPaid()) {
       return;
     }
 
@@ -232,14 +283,24 @@ class _ItemMenuAndSelectionPanelState extends State<ItemMenuAndSelectionPanel> {
       return;
     }
 
-    String newSaleId = '';
+    // generate sale id
+    String newSaleId = await generateSaleId();
 
+    if (newSaleId.isEmpty){
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error generating sale ID. Please try again'),
+          backgroundColor: Colors.red,
+        ),
+      );
+
+      return;
+    }
+    
     try{
-      await widget.db.collection('sales').add({
+      await widget.db.collection('sales').doc(newSaleId).set({
         'totalCost': _itemTotal,
         'timestamp': FieldValue.serverTimestamp()
-      }).then((DocumentReference doc) {
-        newSaleId = doc.id;
       });
 
       for (var entry in _selectedItems.entries) {
@@ -247,6 +308,7 @@ class _ItemMenuAndSelectionPanelState extends State<ItemMenuAndSelectionPanel> {
           'saleId': newSaleId,
           'item': entry.key,
           'quantity': entry.value,
+          'price' : _itemPriceMap[entry.key]
         });
       }
 
@@ -262,6 +324,7 @@ class _ItemMenuAndSelectionPanelState extends State<ItemMenuAndSelectionPanel> {
         _paidAmount = 0.0;
         _balance = 0.0;
         _selectedItems.clear();
+        _itemPriceMap.clear();
       });
       _amountReceivedController.clear();
     } catch (error){
@@ -597,7 +660,7 @@ class _MenuList extends StatelessWidget {
 
 class _SelectionPanel extends StatelessWidget {
   final List<Map<String, dynamic>> items;
-  final void Function(String) selectItems;
+  final void Function(String, double) selectItems;
   final void Function(double) updateTotal;
 
   const _SelectionPanel({
@@ -651,8 +714,8 @@ class _SelectionPanel extends StatelessWidget {
                 ),
                 child: InkWell(
                   onTap: () {
-                    selectItems(item['itemName']);
                     double price = (item['itemPrice'] as num).toDouble();
+                    selectItems(item['itemName'], price);
                     updateTotal(price);
 
                     ScaffoldMessenger.of(context).hideCurrentSnackBar();
