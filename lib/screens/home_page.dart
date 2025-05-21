@@ -366,35 +366,13 @@ class _ItemMenuAndSelectionPanelState extends State<ItemMenuAndSelectionPanel> {
   @override
   Widget build(BuildContext context) {
     final items = widget.items;
-    final isSmallScreen = MediaQuery.of(context).size.width < 600;
 
     return LayoutBuilder(
       builder: (context, constraints) {
         return Column(
           children: [
             Expanded(
-              child: !isSmallScreen
-                  ? Column(
-                      children: [
-                        Expanded(
-                          child: Card(
-                            margin: const EdgeInsets.all(8),
-                            child: _MenuList(items: items),
-                          ),
-                        ),
-                        Expanded(
-                          child: Card(
-                            margin: const EdgeInsets.all(8),
-                            child: _SelectionPanel(
-                              items: items,
-                              selectItems: selectItems,
-                              updateTotal: updateTotal,
-                            ),
-                          ),
-                        ),
-                      ],
-                    )
-                  : Row(
+              child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Expanded(
@@ -440,7 +418,7 @@ class _ItemMenuAndSelectionPanelState extends State<ItemMenuAndSelectionPanel> {
                       ),
                     if (_selectedItems.isNotEmpty)
                       Container(
-                        height: 120,
+                        height: 88,
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(8),
